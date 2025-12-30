@@ -4,8 +4,10 @@ import { Button } from './ui/Button';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useToast } from '../context/ToastContext';
+import { useSettings } from '../context/SettingsContext';
 
 export const Contact: React.FC = () => {
+  const { settings } = useSettings();
   const { showToast } = useToast();
   const [formData, setFormData] = useState({
     parentName: '',
@@ -68,11 +70,11 @@ export const Contact: React.FC = () => {
         <div className="container mx-auto px-4 md:px-8 relative z-10 text-center">
           <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-1.5 rounded-full text-white text-sm font-semibold mb-6">
             <Clock className="w-4 h-4 fill-current" />
-            <span>Tuyển sinh 2024-2025</span>
+            <span>Tuyển sinh {new Date().getFullYear()}-{new Date().getFullYear() + 1}</span>
           </div>
 
           <h2 className="text-3xl md:text-5xl font-display font-bold text-white mb-6 leading-tight">
-            Ba mẹ đã sẵn sàng cho bé gia nhập <br className="hidden md:block" /> gia đình Vàng Anh?
+            Ba mẹ đã sẵn sàng cho bé gia nhập <br className="hidden md:block" /> gia đình {settings?.schoolName || 'Vàng Anh'}?
           </h2>
 
           <p className="text-white/90 text-lg max-w-2xl mx-auto mb-10 font-medium">
@@ -93,10 +95,10 @@ export const Contact: React.FC = () => {
               variant="outline-white"
               size="lg"
               className="gap-2"
-              onClick={() => window.location.href = 'tel:0901234567'}
+              onClick={() => window.location.href = `tel:${settings?.hotline || '0901234567'}`}
             >
               <Phone className="w-5 h-5" />
-              090 123 4567
+              {settings?.hotline || '090 123 4567'}
             </Button>
           </div>
         </div>
@@ -125,7 +127,7 @@ export const Contact: React.FC = () => {
                   </div>
                   <div>
                     <h4 className="font-bold text-gray-900 mb-1">Địa chỉ</h4>
-                    <p className="text-gray-600">123 Đường Hạnh Phúc, Quận 1, TP. Hồ Chí Minh</p>
+                    <p className="text-gray-600">{settings?.address || '123 Đường Hạnh Phúc, Quận 1, TP. Hồ Chí Minh'}</p>
                   </div>
                 </div>
 
@@ -135,7 +137,7 @@ export const Contact: React.FC = () => {
                   </div>
                   <div>
                     <h4 className="font-bold text-gray-900 mb-1">Điện thoại</h4>
-                    <p className="text-gray-600">090 123 4567 - 028 1234 5678</p>
+                    <p className="text-gray-600">{settings?.hotline || '090 123 4567'}</p>
                   </div>
                 </div>
 
@@ -145,7 +147,7 @@ export const Contact: React.FC = () => {
                   </div>
                   <div>
                     <h4 className="font-bold text-gray-900 mb-1">Email</h4>
-                    <p className="text-gray-600">info@vanganh.edu.vn</p>
+                    <p className="text-gray-600">{settings?.email || 'info@vanganh.edu.vn'}</p>
                   </div>
                 </div>
               </div>

@@ -4,6 +4,7 @@ import { doc, getDoc, setDoc, updateDoc, increment } from 'firebase/firestore';
 import { db } from './firebase';
 import { ToastProvider } from './context/ToastContext';
 import { ConfirmProvider } from './context/ConfirmContext';
+import { SettingsProvider } from './context/SettingsContext';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { ScrollToTop } from './components/ScrollToTop';
@@ -129,13 +130,15 @@ function App() {
   }, []);
 
   return (
-    <ToastProvider>
-      <ConfirmProvider>
-        <Router>
-          <Layout />
-        </Router>
-      </ConfirmProvider>
-    </ToastProvider>
+    <SettingsProvider>
+      <ToastProvider>
+        <ConfirmProvider>
+          <Router>
+            <Layout />
+          </Router>
+        </ConfirmProvider>
+      </ToastProvider>
+    </SettingsProvider>
   );
 }
 

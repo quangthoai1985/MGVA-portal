@@ -6,8 +6,10 @@ import { Button } from './ui/Button';
 import { db } from '../firebase';
 import { collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
+import { useSettings } from '../context/SettingsContext';
 
 export const NewsHero: React.FC = () => {
+  const { settings } = useSettings();
   const navigate = useNavigate();
   const [newsItems, setNewsItems] = useState<any[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -78,7 +80,9 @@ export const NewsHero: React.FC = () => {
               <span className="w-2 h-2 rounded-full bg-brand-500 animate-pulse"></span>
               Tin tức & Hoạt động
             </span>
-            <h2 className="text-3xl font-display font-bold text-gray-900 mt-1">Tiêu điểm Vàng Anh</h2>
+            <h2 className="text-3xl font-display font-bold text-gray-900 mt-1">
+              Tiêu điểm {settings?.schoolName || 'Vàng Anh'}
+            </h2>
           </div>
           <Button variant="ghost" className="hidden md:flex gap-2 text-brand-600 hover:text-brand-700" onClick={() => navigate('/news')}>
             Xem tất cả <ArrowRight className="w-4 h-4" />

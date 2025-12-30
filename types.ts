@@ -33,3 +33,13 @@ export interface TabProps {
   value: string;
   content: ReactNode;
 }
+
+export interface GeneralSettings {
+  pageTitle: string;
+  schoolName: string;
+  hotline: string;
+  email: string;
+  address: string;
+  logoUrl: string;
+  faviconUrl: string;
+}

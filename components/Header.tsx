@@ -4,6 +4,7 @@ import { Menu, X, Search, ChevronRight } from 'lucide-react';
 import { Button } from './ui/Button';
 import { NavItem } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSettings } from '../context/SettingsContext';
 
 // Defined logic types for href: 'home', 'about', 'resources', or '#section'
 const NAV_ITEMS: NavItem[] = [
@@ -20,6 +21,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
+  const { settings } = useSettings();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('home');
@@ -32,9 +34,9 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
       // 2. Handle Scroll Spy (Active State)
       // Only spy on sections present on the homepage or identified by ID
       const sections = NAV_ITEMS.filter(item => item.href.startsWith('#')).map(item => item.href.substring(1));
-      
+
       let current = '';
-      
+
       // Check standard pages first based on URL/State if we were using a router, 
       // but here we check scroll position for sections
       for (const section of sections) {
@@ -75,7 +77,7 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
   const handleNavClick = (e: React.MouseEvent, href: string) => {
     e.preventDefault();
     setActiveSection(href); // Immediate feedback
-    
+
     if (onNavigate) {
       if (href.startsWith('#')) {
         onNavigate('home', href);
@@ -105,24 +107,31 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
 
   return (
     <>
-      <header 
-        className={`sticky top-0 z-40 transition-all duration-300 ${
-          isScrolled ? 'bg-white/95 backdrop-blur-md shadow-sm py-2' : 'bg-transparent py-4'
-        }`}
+      <header
+        className={`sticky top-0 z-40 transition-all duration-300 ${isScrolled ? 'bg-white/95 backdrop-blur-md shadow-sm py-2' : 'bg-transparent py-4'
+          }`}
       >
         <div className="container mx-auto px-4 md:px-8">
           <div className="flex items-center justify-between">
             {/* Logo */}
-            <a 
-              href="home" 
+            <a
+              href="home"
               onClick={(e) => handleNavClick(e, 'home')}
               className="flex items-center gap-2 cursor-pointer group"
             >
-              <div className="w-10 h-10 bg-brand-500 rounded-full flex items-center justify-center text-white font-bold text-xl group-hover:scale-105 transition-transform shadow-brand-500/20 shadow-lg">
-                VA
-              </div>
+              {settings?.logoUrl ? (
+                <img
+                  src={settings.logoUrl}
+                  alt={settings.schoolName}
+                  className="h-10 w-auto object-contain transition-transform group-hover:scale-105"
+                />
+              ) : (
+                <div className="w-10 h-10 bg-brand-500 rounded-full flex items-center justify-center text-white font-bold text-xl group-hover:scale-105 transition-transform shadow-brand-500/20 shadow-lg">
+                  {settings?.schoolName ? settings.schoolName.substring(0, 2).toUpperCase() : 'VA'}
+                </div>
+              )}
               <span className={`text-2xl font-display font-bold transition-colors ${isScrolled ? 'text-gray-800' : 'text-gray-900'}`}>
-                Vàng Anh
+                {settings?.schoolName || 'Vàng Anh'}
               </span>
             </a>
 
@@ -131,8 +140,8 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
               {NAV_ITEMS.map((item) => {
                 const isActive = activeSection === item.href;
                 return (
-                  <a 
-                    key={item.label} 
+                  <a
+                    key={item.label}
                     href={item.href}
                     onClick={(e) => handleNavClick(e, item.href)}
                     className={`text-sm font-bold uppercase tracking-wide transition-all relative py-2
@@ -141,7 +150,7 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
                   >
                     {item.label}
                     {isActive && (
-                      <motion.div 
+                      <motion.div
                         layoutId="activeNav"
                         className="absolute bottom-0 left-0 w-full h-0.5 bg-brand-500 rounded-full"
                       />
@@ -163,7 +172,7 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
             </div>
 
             {/* Mobile Toggle Button - Hidden on desktop (lg:hidden hides it on large screens) */}
-            <button 
+            <button
               className="lg:hidden p-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               onClick={() => setIsMobileMenuOpen(true)}
               aria-label="Open menu"
@@ -187,7 +196,7 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
                 className="fixed inset-0 bg-black/60 z-[9999] backdrop-blur-sm"
                 onClick={() => setIsMobileMenuOpen(false)}
               />
-              
+
               {/* Drawer Content */}
               <motion.div
                 initial="closed"
@@ -198,10 +207,20 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
               >
                 <div className="flex justify-between items-center mb-8 border-b border-gray-100 pb-6">
                   <div className="flex items-center gap-2">
-                     <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-white font-bold text-sm">VA</div>
-                     <span className="text-xl font-display font-bold text-gray-900">Menu</span>
+                    {settings?.logoUrl ? (
+                      <img
+                        src={settings.logoUrl}
+                        alt={settings.schoolName}
+                        className="h-8 w-auto object-contain"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                        {settings?.schoolName ? settings.schoolName.substring(0, 2).toUpperCase() : 'VA'}
+                      </div>
+                    )}
+                    <span className="text-xl font-display font-bold text-gray-900">Menu</span>
                   </div>
-                  <button 
+                  <button
                     onClick={() => setIsMobileMenuOpen(false)}
                     className="p-2 hover:bg-red-50 hover:text-red-500 rounded-full transition-colors text-gray-400"
                   >
@@ -213,14 +232,14 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
                   {NAV_ITEMS.map((item) => {
                     const isActive = activeSection === item.href;
                     return (
-                      <motion.a 
-                        key={item.label} 
+                      <motion.a
+                        key={item.label}
                         href={item.href}
                         variants={itemVariants}
                         onClick={(e) => handleNavClick(e, item.href)}
                         className={`text-lg font-medium py-3 px-4 rounded-xl flex items-center justify-between transition-colors
-                          ${isActive 
-                            ? 'bg-brand-50 text-brand-700 font-bold' 
+                          ${isActive
+                            ? 'bg-brand-50 text-brand-700 font-bold'
                             : 'text-gray-600 hover:bg-gray-50 hover:text-brand-600'
                           }
                         `}
@@ -233,16 +252,16 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
                 </div>
 
                 <div className="mt-auto flex flex-col gap-4 pt-6 border-t border-gray-100">
-                   <motion.div variants={itemVariants}>
-                      <Button variant="outline" fullWidth className="justify-center h-12">
-                         Tra cứu thông tin
-                      </Button>
-                   </motion.div>
-                   <motion.div variants={itemVariants}>
-                      <Button variant="primary" fullWidth className="justify-center h-12 shadow-lg shadow-brand-500/20">
-                         Đăng ký nhập học
-                      </Button>
-                   </motion.div>
+                  <motion.div variants={itemVariants}>
+                    <Button variant="outline" fullWidth className="justify-center h-12">
+                      Tra cứu thông tin
+                    </Button>
+                  </motion.div>
+                  <motion.div variants={itemVariants}>
+                    <Button variant="primary" fullWidth className="justify-center h-12 shadow-lg shadow-brand-500/20">
+                      Đăng ký nhập học
+                    </Button>
+                  </motion.div>
                 </div>
               </motion.div>
             </>

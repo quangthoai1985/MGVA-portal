@@ -44,9 +44,11 @@ type AdminTab = 'dashboard' | 'menu' | 'schedule' | 'news' | 'settings' | 'galle
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useConfirm } from '../context/ConfirmContext';
+import { useSettings } from '../context/SettingsContext';
 import { Editor } from './ui/Editor';
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) => {
+  const { settings: globalSettings } = useSettings();
   const { currentUser, login, logout } = useAuth();
   const { showToast } = useToast();
   const [username, setUsername] = useState('');
@@ -82,11 +84,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
       <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4 animate-in fade-in zoom-in duration-300">
         <div className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md border border-gray-100">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-brand-500 rounded-2xl flex items-center justify-center text-white font-bold text-3xl shadow-lg shadow-brand-500/20 mx-auto mb-4">
-              VA
-            </div>
+            {globalSettings?.logoUrl ? (
+              <img src={globalSettings.logoUrl} alt="Logo" className="w-16 h-16 object-contain mx-auto mb-4" />
+            ) : (
+              <div className="w-16 h-16 bg-brand-500 rounded-2xl flex items-center justify-center text-white font-bold text-3xl shadow-lg shadow-brand-500/20 mx-auto mb-4">
+                {globalSettings?.schoolName ? globalSettings.schoolName.substring(0, 2).toUpperCase() : 'VA'}
+              </div>
+            )}
             <h2 className="text-2xl font-bold text-gray-900">Đăng nhập quản trị</h2>
-            <p className="text-gray-500 mt-2">Hệ thống quản lý nội dung Vàng Anh</p>
+            <p className="text-gray-500 mt-2">Hệ thống quản lý {globalSettings?.schoolName || 'Vàng Anh'}</p>
             {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
           </div>
 
@@ -226,14 +232,23 @@ interface AdminSidebarContentProps {
 }
 
 const AdminSidebarContent: React.FC<AdminSidebarContentProps> = ({ activeTab, setActiveTab, onNavigate, handleLogout }) => {
+  const { settings } = useSettings();
   return (
     <>
       <div className="p-6 border-b border-slate-800">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-white font-bold text-sm">
-            VA
-          </div>
-          <span className="font-bold text-lg tracking-wide">Admin Panel</span>
+          {settings?.logoUrl ? (
+            <img
+              src={settings.logoUrl}
+              alt={settings.schoolName}
+              className="w-8 h-8 object-contain"
+            />
+          ) : (
+            <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+              {settings?.schoolName ? settings.schoolName.substring(0, 2).toUpperCase() : 'VA'}
+            </div>
+          )}
+          <span className="font-bold text-lg tracking-wide">{settings?.schoolName || 'Admin Panel'}</span>
         </div>
       </div>
 
@@ -1981,8 +1996,121 @@ const NewsManager = () => {
 };
 
 const SettingsManager = () => {
+  const { refreshSettings } = useSettings();
+  const { showToast } = useToast();
+  const [loading, setLoading] = React.useState(true);
+  const [saving, setSaving] = React.useState(false);
+  const [uploadingLogo, setUploadingLogo] = React.useState(false);
+  const [uploadingFavicon, setUploadingFavicon] = React.useState(false);
+
+  const logoInputRef = React.useRef<HTMLInputElement>(null);
+  const faviconInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Form State
+  const [settings, setSettings] = React.useState({
+    pageTitle: 'Trường Mẫu Giáo Vàng Anh - Ươm mầm hạnh phúc',
+    schoolName: 'Trường Mẫu Giáo Vàng Anh',
+    hotline: '090 123 4567',
+    email: 'info@vanganh.edu.vn',
+    address: '123 Đường Hạnh Phúc, Quận 1, TP.HCM',
+    logoUrl: '',
+    faviconUrl: '',
+  });
+
+  // Fetch existing settings on mount
+  React.useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const docSnap = await getDoc(doc(db, 'settings', 'general'));
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setSettings(prev => ({
+            ...prev,
+            pageTitle: data.pageTitle || prev.pageTitle,
+            schoolName: data.schoolName || prev.schoolName,
+            hotline: data.hotline || prev.hotline,
+            email: data.email || prev.email,
+            address: data.address || prev.address,
+            logoUrl: data.logoUrl || prev.logoUrl,
+            faviconUrl: data.faviconUrl || prev.faviconUrl,
+          }));
+        }
+      } catch (error) {
+        console.error("Error fetching settings:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const handleInputChange = (field: string, value: string) => {
+    setSettings(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleFileUpload = async (file: File, type: 'logo' | 'favicon') => {
+    const isLogo = type === 'logo';
+    const setUploading = isLogo ? setUploadingLogo : setUploadingFavicon;
+
+    setUploading(true);
+    try {
+      const storageRef = ref(storage, `branding/${type}_${Date.now()}`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+
+      setSettings(prev => ({
+        ...prev,
+        [isLogo ? 'logoUrl' : 'faviconUrl']: url
+      }));
+
+      showToast(`Tải lên ${isLogo ? 'Logo' : 'Favicon'} thành công! Nhấn "Lưu" để hoàn tất.`, 'success');
+    } catch (error) {
+      console.error(`Error uploading ${type}:`, error);
+      showToast('Lỗi khi tải ảnh lên.', 'error');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    setSaving(true);
+    try {
+      await setDoc(doc(db, 'settings', 'general'), {
+        ...settings,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+      await refreshSettings();
+      showToast('Đã lưu cấu hình thành công!', 'success');
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      showToast('Lỗi khi lưu cấu hình. Vui lòng thử lại.', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="flex items-center justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-brand-500" /></div>;
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500 max-w-4xl">
+      {/* Hidden File Inputs */}
+      <input
+        type="file"
+        ref={logoInputRef}
+        onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'logo')}
+        className="hidden"
+        accept="image/*"
+      />
+      <input
+        type="file"
+        ref={faviconInputRef}
+        onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'favicon')}
+        className="hidden"
+        accept="image/*"
+      />
+
       {/* SECTION 1: BRANDING & IDENTITY */}
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
         <h3 className="font-bold text-gray-900 mb-6 pb-4 border-b border-gray-100 flex items-center gap-2">
@@ -1997,7 +2125,8 @@ const SettingsManager = () => {
             <input
               type="text"
               className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition-all"
-              defaultValue="Trường Mẫu Giáo Vàng Anh - Ươm mầm hạnh phúc"
+              value={settings.pageTitle}
+              onChange={(e) => handleInputChange('pageTitle', e.target.value)}
             />
             <p className="text-xs text-gray-400 mt-2">Hiển thị trên tab trình duyệt và kết quả tìm kiếm Google.</p>
           </div>
@@ -2006,13 +2135,25 @@ const SettingsManager = () => {
             {/* Logo Configuration */}
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2">Logo Website</label>
-              <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 flex flex-col items-center justify-center gap-4 hover:bg-gray-50 transition-colors">
-                <div className="w-20 h-20 bg-brand-500 rounded-2xl flex items-center justify-center text-white font-bold text-3xl shadow-sm">
-                  VA
-                </div>
+              <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 flex flex-col items-center justify-center gap-4 hover:bg-gray-50 transition-colors pointer-events-auto">
+                {settings.logoUrl ? (
+                  <img src={settings.logoUrl} alt="Logo" className="w-20 h-20 object-contain" />
+                ) : (
+                  <div className="w-20 h-20 bg-brand-500 rounded-2xl flex items-center justify-center text-white font-bold text-3xl shadow-sm">
+                    VA
+                  </div>
+                )}
                 <div className="text-center w-full">
-                  <Button size="sm" variant="outline" className="gap-2" fullWidth>
-                    <Upload className="w-4 h-4" /> Tải lên Logo
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-2"
+                    fullWidth
+                    onClick={() => logoInputRef.current?.click()}
+                    disabled={uploadingLogo}
+                  >
+                    {uploadingLogo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                    {uploadingLogo ? 'Đang tải...' : (settings.logoUrl ? 'Thay đổi Logo' : 'Tải lên Logo')}
                   </Button>
                   <p className="text-xs text-gray-400 mt-2">Định dạng PNG, SVG (Trong suốt). Tối đa 2MB.</p>
                 </div>
@@ -2022,13 +2163,25 @@ const SettingsManager = () => {
             {/* Favicon Configuration */}
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2">Favicon</label>
-              <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 flex flex-col items-center justify-center gap-4 hover:bg-gray-50 transition-colors">
-                <div className="w-16 h-16 bg-white border border-gray-100 rounded-lg flex items-center justify-center shadow-sm">
-                  <div className="w-10 h-10 bg-brand-500 rounded-full"></div>
-                </div>
+              <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 flex flex-col items-center justify-center gap-4 hover:bg-gray-50 transition-colors pointer-events-auto">
+                {settings.faviconUrl ? (
+                  <img src={settings.faviconUrl} alt="Favicon" className="w-16 h-16 object-contain" />
+                ) : (
+                  <div className="w-16 h-16 bg-white border border-gray-100 rounded-lg flex items-center justify-center shadow-sm">
+                    <div className="w-10 h-10 bg-brand-500 rounded-full"></div>
+                  </div>
+                )}
                 <div className="text-center w-full">
-                  <Button size="sm" variant="outline" className="gap-2" fullWidth>
-                    <Upload className="w-4 h-4" /> Tải lên Favicon
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-2"
+                    fullWidth
+                    onClick={() => faviconInputRef.current?.click()}
+                    disabled={uploadingFavicon}
+                  >
+                    {uploadingFavicon ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                    {uploadingFavicon ? 'Đang tải...' : (settings.faviconUrl ? 'Thay đổi Favicon' : 'Tải lên Favicon')}
                   </Button>
                   <p className="text-xs text-gray-400 mt-2">Icon hiển thị trên tab trình duyệt. (32x32px)</p>
                 </div>
@@ -2047,29 +2200,50 @@ const SettingsManager = () => {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Tên trường (Hiển thị trong Footer)</label>
-            <input type="text" className="w-full px-4 py-2 rounded-lg border border-gray-200" defaultValue="Trường Mẫu Giáo Vàng Anh" />
+            <input
+              type="text"
+              className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none"
+              value={settings.schoolName}
+              onChange={(e) => handleInputChange('schoolName', e.target.value)}
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Hotline</label>
-              <input type="text" className="w-full px-4 py-2 rounded-lg border border-gray-200" defaultValue="090 123 4567" />
+              <input
+                type="text"
+                className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none"
+                value={settings.hotline}
+                onChange={(e) => handleInputChange('hotline', e.target.value)}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input type="text" className="w-full px-4 py-2 rounded-lg border border-gray-200" defaultValue="info@vanganh.edu.vn" />
+              <input
+                type="text"
+                className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none"
+                value={settings.email}
+                onChange={(e) => handleInputChange('email', e.target.value)}
+              />
             </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ</label>
-            <input type="text" className="w-full px-4 py-2 rounded-lg border border-gray-200" defaultValue="123 Đường Hạnh Phúc, Quận 1, TP.HCM" />
+            <input
+              type="text"
+              className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none"
+              value={settings.address}
+              onChange={(e) => handleInputChange('address', e.target.value)}
+            />
           </div>
         </div>
       </div>
 
       {/* ACTION BAR */}
       <div className="flex justify-end pt-2">
-        <Button className="gap-2 shadow-lg shadow-brand-500/20">
-          <Save className="w-4 h-4" /> Lưu cấu hình hệ thống
+        <Button className="gap-2 shadow-lg shadow-brand-500/20" onClick={handleSaveSettings} disabled={saving}>
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          {saving ? 'Đang lưu...' : 'Lưu cấu hình hệ thống'}
         </Button>
       </div>
     </div>
