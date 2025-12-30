@@ -17,25 +17,32 @@ export const NewsHero: React.FC = () => {
   useEffect(() => {
     const fetchNews = async () => {
       try {
-        // Fetch more items to ensure we get enough active ones after filtering
-        const q = query(collection(db, 'news'), orderBy('createdAt', 'desc'), limit(20));
+        console.log('Fetching news...');
+        // Query only active news to satisfy Security Rules for guests
+        const q = query(collection(db, 'news'), where('status', '==', 'active'), orderBy('createdAt', 'desc'), limit(5));
         const snapshot = await getDocs(q);
+        console.log('Snapshot received. Size:', snapshot.size, 'Empty:', snapshot.empty);
         const list = snapshot.docs
           .map(doc => ({
             id: doc.id,
             ...doc.data()
-          }))
-          .filter((item: any) => item.status === 'active')
-          .slice(0, 5); // Take top 5 active items
+          }));
+        console.log('Processed list:', list);
 
         if (list.length > 0) {
           setNewsItems(list);
         } else {
           // Fallback if no news
           setNewsItems([]);
+          alert('Không tìm thấy tin tức nào (Empty list)');
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error fetching news:", error);
+        alert('Lỗi tải tin tức: ' + error.message);
+        // If index error, show link
+        if (error.message.includes('index')) {
+          prompt("Copy link tạo Index dưới đây:", error.message);
+        }
       } finally {
         setLoading(false);
       }

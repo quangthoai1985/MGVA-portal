@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, ArrowRight } from 'lucide-react';
-import { collection, query, orderBy, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, where } from 'firebase/firestore';
 import { db } from '../firebase';
 
 interface AnnouncementsProps {
@@ -14,12 +14,12 @@ export const Announcements: React.FC<AnnouncementsProps> = ({ onNavigate }) => {
   useEffect(() => {
     const fetchAnnouncements = async () => {
       try {
-        const q = query(collection(db, 'announcements'), orderBy('createdAt', 'desc'));
+        const q = query(collection(db, 'announcements'), where('status', '==', 'active'), orderBy('createdAt', 'desc'));
         const snapshot = await getDocs(q);
         const list = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
-        })).filter((item: any) => item.status === 'active'); // Only show active announcements
+        }));
         setAnnouncements(list);
       } catch (error) {
         console.error("Error fetching announcements:", error);
@@ -61,7 +61,8 @@ export const Announcements: React.FC<AnnouncementsProps> = ({ onNavigate }) => {
           {displayList.map((item) => (
             <div
               key={item.id}
-              className="bg-white rounded-2xl p-8 border border-gray-200 hover:border-brand-500 transition-colors duration-300 shadow-sm hover:shadow-md group"
+              onClick={() => onNavigate && onNavigate(`announcement-detail/${item.id}`)}
+              className="bg-white rounded-2xl p-8 border border-gray-200 hover:border-brand-500 transition-colors duration-300 shadow-sm hover:shadow-md group cursor-pointer"
             >
               <div className="flex items-start justify-between mb-4">
                 <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${item.tag === 'Quan trọng' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
@@ -76,12 +77,11 @@ export const Announcements: React.FC<AnnouncementsProps> = ({ onNavigate }) => {
               <p className="text-gray-600 mb-6 leading-relaxed line-clamp-3">
                 {item.summary || item.content.replace(/<[^>]+>/g, '')}
               </p>
-              <button
-                onClick={() => onNavigate && onNavigate(`announcement-detail/${item.id}`)}
+              <div
                 className="inline-flex items-center text-sm font-bold text-gray-900 group-hover:text-brand-600 hover:underline"
               >
                 Xem chi tiết <ArrowRight className="w-4 h-4 ml-2" />
-              </button>
+              </div>
             </div>
           ))}
         </div>
