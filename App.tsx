@@ -13,6 +13,8 @@ import { HomePage } from './components/HomePage';
 import { AboutPage } from './components/AboutPage';
 import { ResourcesPage } from './components/ResourcesPage';
 import { AnnouncementDetail } from './components/AnnouncementDetail';
+import { NewsPage } from './components/NewsPage';
+import { GalleryPage } from './components/GalleryPage';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -69,8 +71,10 @@ const Layout = () => {
           <Route path="/resources" element={<ResourcesPage />} />
           <Route path="/login" element={<AdminDashboard onNavigate={handleNavigate} />} />
           <Route path="/admin" element={<ProtectedRoute><AdminDashboard onNavigate={handleNavigate} /></ProtectedRoute>} />
+          <Route path="/news" element={<NewsPage />} />
           <Route path="/news/:id" element={<NewsDetail />} />
           <Route path="/announcement-detail/:id" element={<AnnouncementDetailWrapper />} />
+          <Route path="/gallery" element={<GalleryPage />} />
         </Routes>
       </main>
 

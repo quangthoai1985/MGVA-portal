@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Button } from './ui/Button';
 import { collection, query, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
+import { useNavigate } from 'react-router-dom';
 
 export const Gallery: React.FC = () => {
+  const navigate = useNavigate();
   const [galleryImages, setGalleryImages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -46,6 +48,11 @@ export const Gallery: React.FC = () => {
     return (displayImages[idx] as any).size;
   };
 
+  // Lightbox Logic (simplified from GalleryPage)
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
+  const openLightbox = (index: number) => setSelectedImageIndex(index);
+  const closeLightbox = () => setSelectedImageIndex(null);
+
   return (
     <section className="py-20 bg-white" id="program">
       <div className="container mx-auto px-4 md:px-8">
@@ -64,7 +71,8 @@ export const Gallery: React.FC = () => {
           {displayImages.map((img, idx) => (
             <div
               key={idx}
-              className={`rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300 relative group ${getSize(idx)} ${idx === 0 ? 'col-span-2 md:col-span-1' : ''}`}
+              className={`rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300 relative group cursor-zoom-in ${getSize(idx)} ${idx === 0 ? 'col-span-2 md:col-span-1' : ''}`}
+              onClick={() => openLightbox(idx)}
             >
               <img
                 src={img.url || img.src}
@@ -79,11 +87,29 @@ export const Gallery: React.FC = () => {
         </div>
 
         <div className="mt-12 text-center">
-          <Button variant="outline" className="border-gray-200 text-gray-600 hover:text-brand-600 hover:border-brand-500">
+          <Button
+            variant="outline"
+            className="border-gray-200 text-gray-600 hover:text-brand-600 hover:border-brand-500"
+            onClick={() => navigate('/gallery')}
+          >
             Xem toàn bộ album
           </Button>
         </div>
       </div>
+
+      {/* Simple Lightbox for Homepage */}
+      {selectedImageIndex !== null && (
+        <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 backdrop-blur-sm" onClick={closeLightbox}>
+          <img
+            src={displayImages[selectedImageIndex].url || displayImages[selectedImageIndex].src}
+            className="max-w-full max-h-[90vh] rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button onClick={closeLightbox} className="absolute top-4 right-4 text-white p-2 bg-white/10 rounded-full">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+      )}
     </section>
   );
 };

@@ -80,7 +80,7 @@ export const NewsHero: React.FC = () => {
             </span>
             <h2 className="text-3xl font-display font-bold text-gray-900 mt-1">Tiêu điểm Vàng Anh</h2>
           </div>
-          <Button variant="ghost" className="hidden md:flex gap-2 text-brand-600 hover:text-brand-700">
+          <Button variant="ghost" className="hidden md:flex gap-2 text-brand-600 hover:text-brand-700" onClick={() => navigate('/news')}>
             Xem tất cả <ArrowRight className="w-4 h-4" />
           </Button>
         </div>
@@ -195,7 +195,7 @@ export const NewsHero: React.FC = () => {
             })}
 
             {/* View All Button for Mobile */}
-            <Button variant="outline" fullWidth className="md:hidden mt-2">
+            <Button variant="outline" fullWidth className="md:hidden mt-2" onClick={() => navigate('/news')}>
               Xem tất cả tin tức
             </Button>
           </div>
