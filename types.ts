@@ -11,8 +11,12 @@ export interface DailyMenu {
   dayOfWeek: number;  // 2-7 (Monday-Saturday)
   day: string;  // "Thứ 2", "Thứ 3", etc.
   date: string;  // "DD/MM" format
-  lunch: string;
-  snack: string;
+  morningSnack: string; // 08:45
+  mainMeal: string;     // 10:20
+  afternoonSnack1: string; // 13:30
+  afternoonSnack2: string; // 15:05
+  month?: number;
+  year?: number;
   isHoliday?: boolean;  // Mark as holiday
   holidayName?: string;  // Holiday name (e.g., "Quốc khánh 2/9")
 }

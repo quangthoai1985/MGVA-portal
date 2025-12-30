@@ -31,7 +31,7 @@ import {
 import { Button } from './ui/Button';
 import { db, storage } from '../firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { collection, doc, getDocs, writeBatch, query, orderBy, onSnapshot, deleteDoc, updateDoc, addDoc, serverTimestamp, getDoc, limit, setDoc } from 'firebase/firestore';
+import { collection, doc, getDocs, writeBatch, query, orderBy, onSnapshot, deleteDoc, updateDoc, addDoc, serverTimestamp, getDoc, limit, setDoc, where } from 'firebase/firestore';
 import { DailyMenu } from '../types';
 import { getWeekDates } from '../utils/menuUtils';
 
@@ -996,23 +996,120 @@ const GalleryManager = () => {
 const MenuManager = () => {
   const { showToast } = useToast();
   const [activeWeek, setActiveWeek] = React.useState(1);
+  const [selectedMonth, setSelectedMonth] = React.useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = React.useState(new Date().getFullYear());
   const [menuData, setMenuData] = React.useState<DailyMenu[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [monthlyMenuFile, setMonthlyMenuFile] = React.useState<File | null>(null);
   const [currentMenuUrl, setCurrentMenuUrl] = React.useState<string>('');
+  const [currentMenuFileName, setCurrentMenuFileName] = React.useState<string>('');
   const [uploading, setUploading] = React.useState(false);
 
   // Fetch menu data for all weeks
   React.useEffect(() => {
     const fetchMenu = async () => {
+      setLoading(true);
       try {
-        // Fetch all menus without orderBy to avoid index requirement
-        const q = query(collection(db, 'menus'));
-        const querySnapshot = await getDocs(q);
-        let menus = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyMenu));
+        // Fetch all menus for the selected month/year
+        // We construct IDs based on the selected month/year: menu_YYYY_MM_weekW_dayD
+        // However, to fetch all efficiently without knowing exact headers, we might query by collection if feasible, 
+        // OR we can just generate the expected IDs and fetch them. 
+        // Since we need to show 4 weeks, we can fetch all potential docs.
+
+        // BETTER APPROACH: Query by 'month' and 'year' fields if we add them to docs.
+        // I added 'month' and 'year' to types, so assuming we verify 'handleSave' adds them.
+        // But for backward compatibility or if fields are missing, let's use the ID convention for now or query.
+        // Actually, previous step updated types.ts. We should use a query.
+
+        const q = query(
+          collection(db, 'menus'),
+          // We can't easily query by fields if they don't exist yet on old docs.
+          // OLD docs: 'weekX_dayY'. NEW docs: 'menu_YYYY_MM_weekX_dayY'.
+          // Let's rely on ID patterns or just fetch the specific 4 weeks * 5 days = 20 docs.
+        );
+
+        // Let's just try obtaining all docs gives us flexibility but might be heavy? No, only a few docs in total usually?
+        // Actually, if we have many months, fetching ALL is bad.
+        // Let's fetch specific IDs for this month!
+
+        // Generate expected IDs for 4 weeks * 5 days
+        const expectedIds: string[] = [];
+        for (let w = 1; w <= 4; w++) {
+          for (let d = 2; d <= 6; d++) {
+            expectedIds.push(`menu_${selectedYear}_${selectedMonth}_week${w}_day${d}`);
+          }
+        }
+
+        // Firestore 'in' query supports up to 10 items (or 30? it varies, usually 10 for 'in', 30 for 'array-contains'). 
+        // 20 items is too many for a single 'in' check on documentId().
+        // So we might need to make parallel requests or just fetch the whole collection and filter client side IF the collection is small.
+        // BUT as data grows, that's bad.
+        // Best approach: Add 'month' and 'year' fields and Composite Index? 
+        // OR just fetch them one by one (20 reads is fine).
+        // Let's try fetching by query if possible. 
+        // Allow querying for this specific month/year.
+
+        let menus: DailyMenu[] = [];
+        const qByMonth = query(
+          collection(db, 'menus'),
+          where('month', '==', selectedMonth),
+          where('year', '==', selectedYear)
+        );
+        const querySnapshot = await getDocs(qByMonth);
+        menus = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyMenu));
+
+        // If no data found for this month (e.g. new month), we initialize empty
+        if (menus.length === 0) {
+          // check if we have data from old format solely for "current" month? No, let's just use empty for new months.
+        }
 
         // Sort client-side
         menus = menus.sort((a, b) => {
+          if (a.week !== b.week) return a.week - b.week;
+          return a.dayOfWeek - b.dayOfWeek;
+        });
+
+        // Deduplicate Logic
+        // In case multiple documents exist for the same day (e.g. mixed ID formats),
+        // we prioritize the one matching the new ID format 'menu_YYYY_MM...',
+        // or the one with content.
+        const uniqueMap = new Map<string, DailyMenu>();
+        const targetIdPrefix = `menu_${selectedYear}_${selectedMonth}`;
+
+        menus.forEach(item => {
+          const key = `${item.week}-${item.dayOfWeek}`;
+
+          if (!uniqueMap.has(key)) {
+            uniqueMap.set(key, item);
+          } else {
+            const existing = uniqueMap.get(key)!;
+
+            // Rules to replace existing:
+            // 1. If current item has correct ID prefix and existing does not.
+            // 2. If both have/don't have prefix, but current has content and existing is empty.
+            const currentHasPrefix = item.id?.startsWith(targetIdPrefix);
+            const existingHasPrefix = existing.id?.startsWith(targetIdPrefix);
+
+            const currentHasContent = (item.mainMeal || item.morningSnack || '').length > 0;
+            const existingHasContent = (existing.mainMeal || existing.morningSnack || '').length > 0;
+
+            let shouldReplace = false;
+
+            if (currentHasPrefix && !existingHasPrefix) {
+              shouldReplace = true;
+            } else if (currentHasPrefix === existingHasPrefix) {
+              if (currentHasContent && !existingHasContent) {
+                shouldReplace = true;
+              }
+            }
+
+            if (shouldReplace) {
+              uniqueMap.set(key, item);
+            }
+          }
+        });
+
+        menus = Array.from(uniqueMap.values()).sort((a, b) => {
           if (a.week !== b.week) return a.week - b.week;
           return a.dayOfWeek - b.dayOfWeek;
         });
@@ -1024,7 +1121,7 @@ const MenuManager = () => {
           const initialData: DailyMenu[] = [];
           for (let week = 1; week <= 4; week++) {
             const weekDays = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6'];
-            const dates = getWeekDates(week);
+            const dates = getWeekDates(week, selectedMonth, selectedYear);
 
             weekDays.forEach((day, index) => {
               initialData.push({
@@ -1032,8 +1129,12 @@ const MenuManager = () => {
                 dayOfWeek: index + 2,
                 day,
                 date: dates[index],
-                lunch: '',
-                snack: ''
+                morningSnack: '',
+                mainMeal: '',
+                afternoonSnack1: '',
+                afternoonSnack2: '',
+                month: selectedMonth,
+                year: selectedYear
               });
             });
           }
@@ -1041,9 +1142,25 @@ const MenuManager = () => {
         }
 
         // Fetch monthly menu URL
-        const menuSettingsDoc = await getDoc(doc(db, 'settings', 'menu'));
+        // We need month specific menu file? "File Thực đơn tháng" implies specific to this month? 
+        // Or one global file? 
+        // User request: "Hiển thị File Thực đơn tháng đã được upload".
+        // It implies the file for the SELECTED month ideally, OR just one file.
+        // Let's assume one GLOBAL file for now based on previous implementation, 
+        // BUT logic suggests it should probably be per month if we are selecting months?
+        // "Trong Admin Panel thêm tùy chọn Drop List chọn tháng để nhập thực đơn." -> "Hiển thị File Thực đơn tháng..." 
+        // Likely per month. Let's make it per month: 'settings/menu_YYYY_MM'.
+
+        const menuSettingsId = `menu_${selectedYear}_${selectedMonth}`;
+        const menuSettingsDoc = await getDoc(doc(db, 'settings', menuSettingsId));
+
+        // Fallback to global 'menu' only if dealing with legacy? No, let's start fresh for months.
         if (menuSettingsDoc.exists()) {
           setCurrentMenuUrl(menuSettingsDoc.data()?.monthlyMenuUrl || '');
+          setCurrentMenuFileName(menuSettingsDoc.data()?.fileName || '');
+        } else {
+          setCurrentMenuUrl('');
+          setCurrentMenuFileName('');
         }
       } catch (error) {
         console.error("Error fetching menu:", error);
@@ -1053,13 +1170,13 @@ const MenuManager = () => {
       }
     };
     fetchMenu();
-  }, []);
+  }, [selectedMonth, selectedYear]);
 
   const getCurrentWeekMenu = () => {
     return menuData.filter(item => item.week === activeWeek);
   };
 
-  const handleInputChange = (dayOfWeek: number, field: 'lunch' | 'snack', value: string) => {
+  const handleInputChange = (dayOfWeek: number, field: keyof DailyMenu, value: string) => {
     const newMenu = menuData.map(item => {
       if (item.week === activeWeek && item.dayOfWeek === dayOfWeek) {
         return { ...item, [field]: value };
@@ -1077,19 +1194,24 @@ const MenuManager = () => {
 
     setUploading(true);
     try {
-      const storageRef = ref(storage, `menus/monthly/${Date.now()}_${monthlyMenuFile.name}`);
+      const storageRef = ref(storage, `menus/monthly/${selectedYear}_${selectedMonth}_${Date.now()}_${monthlyMenuFile.name}`);
       await uploadBytes(storageRef, monthlyMenuFile);
       const downloadUrl = await getDownloadURL(storageRef);
 
-      // Save URL to Firestore
-      const menuSettingsRef = doc(db, 'settings', 'menu');
+      // Save URL to Firestore with specific month ID
+      const menuSettingsId = `menu_${selectedYear}_${selectedMonth}`;
+      const menuSettingsRef = doc(db, 'settings', menuSettingsId);
+
       await setDoc(menuSettingsRef, {
         monthlyMenuUrl: downloadUrl,
         fileName: monthlyMenuFile.name,
+        month: selectedMonth,
+        year: selectedYear,
         updatedAt: serverTimestamp()
       }, { merge: true });
 
       setCurrentMenuUrl(downloadUrl);
+      setCurrentMenuFileName(monthlyMenuFile.name);
       setMonthlyMenuFile(null);
       showToast('Đã tải lên thực đơn tháng thành công!', 'success');
     } catch (error) {
@@ -1100,20 +1222,49 @@ const MenuManager = () => {
     }
   };
 
+  const handleDeleteMonthlyMenu = async () => {
+    if (!confirm('Bạn có chắc chắn muốn xóa file thực đơn này không?')) return;
+
+    try {
+      // Delete from Firestore
+      const menuSettingsId = `menu_${selectedYear}_${selectedMonth}`;
+      await deleteDoc(doc(db, 'settings', menuSettingsId));
+
+      // Optionally delete from Storage if we had the full path ref, but URL is enough to unlink.
+      // For now, we just unlink the DB record.
+
+      setCurrentMenuUrl('');
+      setCurrentMenuFileName('');
+      showToast('Đã xóa file thực đơn tháng.', 'success');
+    } catch (error) {
+      console.error("Error deleting monthly menu:", error);
+      showToast('Lỗi khi xóa file', 'error');
+    }
+  };
+
   const handleSave = async () => {
     try {
       const batch = writeBatch(db);
       const currentWeekMenu = getCurrentWeekMenu();
 
       currentWeekMenu.forEach((item) => {
-        const docId = `week${item.week}_day${item.dayOfWeek}`;
+        // Use composite ID: menu_YYYY_MM_weekW_dayD
+        const docId = `menu_${selectedYear}_${selectedMonth}_week${item.week}_day${item.dayOfWeek}`;
         const docRef = doc(db, 'menus', docId);
         const { id, ...data } = item;
-        batch.set(docRef, data);
+
+        // Ensure month and year are saved
+        const saveData = {
+          ...data,
+          month: selectedMonth,
+          year: selectedYear
+        };
+
+        batch.set(docRef, saveData);
       });
 
       await batch.commit();
-      showToast('Đã lưu thực đơn tuần ' + activeWeek + ' thành công!', 'success');
+      showToast('Đã lưu thực đơn tuần ' + activeWeek + ' (Tháng ' + selectedMonth + ') thành công!', 'success');
     } catch (error) {
       console.error("Error saving menu:", error);
       showToast('Lỗi khi lưu thực đơn', 'error');
@@ -1126,29 +1277,71 @@ const MenuManager = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
+      {/* Month/Year Selection */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-wrap gap-4 items-end">
+        <div className="w-40">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Tháng</label>
+          <select
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(Number(e.target.value))}
+            className="w-full rounded-lg border-gray-200 focus:ring-brand-500 focus:border-brand-500"
+          >
+            {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+              <option key={m} value={m}>Tháng {m}</option>
+            ))}
+          </select>
+        </div>
+        <div className="w-32">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Năm</label>
+          <input
+            type="number"
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(Number(e.target.value))}
+            className="w-full rounded-lg border-gray-200 focus:ring-brand-500 focus:border-brand-500"
+          />
+        </div>
+      </div>
+
       {/* Monthly Menu Upload Section */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <div>
-            <h3 className="font-bold text-gray-900 text-lg">File Thực đơn tháng</h3>
+            <h3 className="font-bold text-gray-900 text-lg">File Thực đơn tháng {selectedMonth}/{selectedYear}</h3>
             <p className="text-sm text-gray-500">File này sẽ được tải về khi phụ huynh nhấn nút "Tải về thực đơn tháng" trên trang chủ.</p>
           </div>
           {currentMenuUrl && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={() => window.open(currentMenuUrl, '_blank')}
-            >
-              <Eye className="w-4 h-4" /> Xem file hiện tại
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => window.open(currentMenuUrl, '_blank')}
+              >
+                <Eye className="w-4 h-4" /> Xem file
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                onClick={handleDeleteMonthlyMenu}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </div>
           )}
         </div>
+
+        {currentMenuFileName && (
+          <div className="mb-4 p-3 bg-blue-50 text-blue-700 rounded-lg flex items-center gap-2 text-sm">
+            <FileText className="w-4 h-4" />
+            <span>File hiện tại: <strong>{currentMenuFileName}</strong></span>
+          </div>
+        )}
 
         <div className="flex flex-col md:flex-row gap-4 items-end">
           <div className="flex-1">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Chọn file PDF hoặc hình ảnh
+              Chọn file PDF hoặc hình ảnh mới (sẽ thay thế file cũ)
             </label>
             <input
               type="file"
@@ -1187,22 +1380,43 @@ const MenuManager = () => {
 
         {/* Menu Table */}
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full border-collapse">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Thứ</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Ngày</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Nghỉ lễ</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Bữa trưa</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Bữa xế</th>
+                <th rowSpan={2} className="px-4 py-4 text-left text-xs font-bold text-gray-500 uppercase border border-gray-200">Thứ</th>
+                <th rowSpan={2} className="px-4 py-4 text-left text-xs font-bold text-gray-500 uppercase border border-gray-200">Ngày</th>
+                <th rowSpan={2} className="px-4 py-4 text-left text-xs font-bold text-gray-500 uppercase border border-gray-200 w-24">Nghỉ lễ</th>
+
+                {/* Buổi Sáng Group */}
+                <th colSpan={2} className="px-4 py-2 text-center text-xs font-bold text-brand-600 uppercase border border-gray-200 bg-brand-50/50">Buổi Sáng</th>
+
+                {/* Buổi Chiều Group */}
+                <th colSpan={2} className="px-4 py-2 text-center text-xs font-bold text-brand-600 uppercase border border-gray-200 bg-brand-50/50">Buổi Chiều</th>
+              </tr>
+              <tr>
+                {/* Morning Sub-headers */}
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 border border-gray-200 w-1/5">
+                  Bữa phụ sáng <br /><span className="text-gray-400 text-[10px]">(08:45)</span>
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 border border-gray-200 w-1/5">
+                  Bữa chính trưa <br /><span className="text-gray-400 text-[10px]">(10:20)</span>
+                </th>
+
+                {/* Afternoon Sub-headers */}
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 border border-gray-200 w-1/5">
+                  Bữa phụ chiều 1 <br /><span className="text-gray-400 text-[10px]">(13:30)</span>
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 border border-gray-200 w-1/5">
+                  Bữa phụ chiều 2 <br /><span className="text-gray-400 text-[10px]">(15:05)</span>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {currentWeekMenu.map((item) => (
                 <tr key={item.dayOfWeek} className={`hover:bg-gray-50 ${item.isHoliday ? 'bg-red-50/50' : ''}`}>
-                  <td className="px-6 py-4 font-bold text-gray-900">{item.day}</td>
-                  <td className="px-6 py-4 text-sm text-gray-500">{item.date}</td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-4 font-bold text-gray-900 border border-gray-100">{item.day}</td>
+                  <td className="px-4 py-4 text-sm text-gray-500 border border-gray-100">{item.date}</td>
+                  <td className="px-4 py-4 border border-gray-100">
                     <div className="flex flex-col gap-2">
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input
@@ -1219,7 +1433,7 @@ const MenuManager = () => {
                           }}
                           className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
                         />
-                        <span className="text-xs text-gray-600">Đánh dấu nghỉ</span>
+                        <span className="text-xs text-gray-600">Nghỉ</span>
                       </label>
                       {item.isHoliday && (
                         <input
@@ -1234,35 +1448,65 @@ const MenuManager = () => {
                             });
                             setMenuData(newMenu);
                           }}
-                          placeholder="Tên ngày lễ (VD: Quốc khánh 2/9)"
+                          placeholder="Tên ngày lễ"
                           className="w-full px-2 py-1 text-xs border border-red-200 rounded focus:ring-2 focus:ring-red-500 focus:border-transparent"
                         />
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+
+                  {/* Morning Inputs */}
+                  <td className="px-4 py-4 border border-gray-100">
                     {item.isHoliday ? (
-                      <span className="text-red-600 font-medium italic">Nghỉ lễ</span>
+                      <span className="text-red-600 font-medium italic text-xs">Nghỉ lễ</span>
                     ) : (
                       <input
                         type="text"
-                        className="w-full bg-transparent border-none focus:ring-0 p-0 text-gray-600 focus:text-brand-600 font-medium transition-colors"
-                        value={item.lunch}
-                        onChange={(e) => handleInputChange(item.dayOfWeek, 'lunch', e.target.value)}
-                        placeholder="Nhập món ăn buổi trưa..."
+                        className="w-full bg-transparent border-none focus:ring-0 p-0 text-gray-600 focus:text-brand-600 font-medium transition-colors text-sm"
+                        value={item.morningSnack || ''}
+                        onChange={(e) => handleInputChange(item.dayOfWeek, 'morningSnack', e.target.value)}
+                        placeholder="Nhập món..."
                       />
                     )}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-4 border border-gray-100">
                     {item.isHoliday ? (
-                      <span className="text-red-600 font-medium italic">Nghỉ lễ</span>
+                      <span className="text-red-600 font-medium italic text-xs">Nghỉ lễ</span>
                     ) : (
                       <input
                         type="text"
-                        className="w-full bg-transparent border-none focus:ring-0 p-0 text-gray-600 focus:text-brand-600 font-medium transition-colors"
-                        value={item.snack}
-                        onChange={(e) => handleInputChange(item.dayOfWeek, 'snack', e.target.value)}
-                        placeholder="Nhập món ăn buổi xế..."
+                        className="w-full bg-transparent border-none focus:ring-0 p-0 text-gray-600 focus:text-brand-600 font-medium transition-colors text-sm"
+                        value={item.mainMeal || ''}
+                        onChange={(e) => handleInputChange(item.dayOfWeek, 'mainMeal', e.target.value)}
+                        placeholder="Nhập món..."
+                      />
+                    )}
+                  </td>
+
+                  {/* Afternoon Inputs */}
+                  <td className="px-4 py-4 border border-gray-100">
+                    {item.isHoliday ? (
+                      <span className="text-red-600 font-medium italic text-xs">Nghỉ lễ</span>
+                    ) : (
+                      <input
+                        type="text"
+                        className="w-full bg-transparent border-none focus:ring-0 p-0 text-gray-600 focus:text-brand-600 font-medium transition-colors text-sm"
+                        value={item.afternoonSnack1 || ''}
+                        onChange={(e) => handleInputChange(item.dayOfWeek, 'afternoonSnack1', e.target.value)}
+                        placeholder="Nhập món..."
+                      />
+                    )}
+                  </td>
+                  <td className="px-4 py-4 border border-gray-100">
+                    {item.isHoliday ? (
+                      <span className="text-red-600 font-medium italic text-xs">Nghỉ lễ</span>
+                    ) : (
+                      <input
+                        type="text"
+                        className="w-full bg-transparent border-none focus:ring-0 p-0 text-gray-600 focus:text-brand-600 font-medium transition-colors text-sm"
+                        value={item.afternoonSnack2 || ''}
+                        onChange={(e) => handleInputChange(item.dayOfWeek, 'afternoonSnack2', e.target.value)}
+                        placeholder="Nhập món..."
                       />
                     )}
                   </td>

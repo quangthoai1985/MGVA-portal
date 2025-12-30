@@ -30,7 +30,7 @@ export function getCurrentWeekOfMonth(): number {
  */
 export function getWeekDates(weekNumber: number, month?: number, year?: number): string[] {
     const now = new Date();
-    const targetMonth = month ?? now.getMonth();
+    const targetMonth = month ? month - 1 : now.getMonth(); // JS months are 0-11
     const targetYear = year ?? now.getFullYear();
 
     // Find the first Monday of the month
@@ -50,6 +50,8 @@ export function getWeekDates(weekNumber: number, month?: number, year?: number):
     const dates: string[] = [];
     for (let i = 0; i < 5; i++) {
         const date = new Date(targetYear, targetMonth, startDate + i);
+        // Ensure we don't bleed into next month too much if logic demands strictness, 
+        // but typically weeks can bridge months. For simplicity, we stick to the calculated dates.
         dates.push(formatDate(date));
     }
 
@@ -76,8 +78,8 @@ export function getWeekdayName(dayIndex: number): string {
 /**
  * Generate initial menu data for a week
  */
-export function generateWeekMenuData(weekNumber: number) {
-    const dates = getWeekDates(weekNumber);
+export function generateWeekMenuData(weekNumber: number, month?: number, year?: number) {
+    const dates = getWeekDates(weekNumber, month, year);
     const weekdays = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6'];
 
     return weekdays.map((day, index) => ({
@@ -85,7 +87,11 @@ export function generateWeekMenuData(weekNumber: number) {
         dayOfWeek: index + 2, // Monday = 2
         day,
         date: dates[index],
-        lunch: '',
-        snack: ''
+        morningSnack: '',
+        mainMeal: '',
+        afternoonSnack1: '',
+        afternoonSnack2: '',
+        month,
+        year
     }));
 }
