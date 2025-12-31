@@ -9,7 +9,7 @@ import { useSettings } from '../context/SettingsContext';
 // Defined logic types for href: 'home', 'about', 'resources', or '#section'
 const NAV_ITEMS: NavItem[] = [
   { label: 'Trang chủ', href: 'home' },
-  { label: 'Giới thiệu', href: 'about' },
+  { label: 'Giới thiệu', href: '/about' },
   { label: 'Tài nguyên', href: 'resources' },
   { label: 'Tin hoạt động', href: '#activities' },
   { label: 'Thông báo', href: '#announcements' },

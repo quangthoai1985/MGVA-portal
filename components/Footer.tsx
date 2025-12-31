@@ -1,5 +1,5 @@
 import React from 'react';
-import { Facebook, MapPin, Phone, Mail, Clock, Instagram, Youtube, Send, Lock } from 'lucide-react';
+import { Facebook, MapPin, Phone, Mail, Clock, Lock } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
 
 interface FooterProps {
@@ -80,17 +80,11 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             <h4 className="text-white font-bold font-display text-lg mb-6">Kết nối với chúng tôi</h4>
             <p className="text-gray-400 mb-6">Theo dõi để cập nhật hoạt động mới nhất của trường!</p>
             <div className="flex gap-4">
-              <a href="#" className="w-10 h-10 rounded-full bg-[#1877F2] flex items-center justify-center text-white hover:scale-110 transition-transform shadow-lg shadow-blue-900/20" aria-label="Facebook">
+              <a href="https://www.facebook.com/profile.php?id=61579089703201" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-[#1877F2] flex items-center justify-center text-white hover:scale-110 transition-transform shadow-lg shadow-blue-900/20" aria-label="Facebook">
                 <Facebook className="w-5 h-5" />
               </a>
-              <a href="#" className="w-10 h-10 rounded-full bg-[#229ED9] flex items-center justify-center text-white hover:scale-110 transition-transform shadow-lg shadow-sky-900/20" aria-label="Telegram">
-                <Send className="w-5 h-5" />
-              </a>
-              <a href="#" className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] flex items-center justify-center text-white hover:scale-110 transition-transform shadow-lg shadow-pink-900/20" aria-label="Instagram">
-                <Instagram className="w-5 h-5" />
-              </a>
-              <a href="#" className="w-10 h-10 rounded-full bg-[#FF0000] flex items-center justify-center text-white hover:scale-110 transition-transform shadow-lg shadow-red-900/20" aria-label="Youtube">
-                <Youtube className="w-5 h-5" />
+              <a href="https://zalo.me/0979423722" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-white hover:scale-110 transition-transform shadow-lg shadow-blue-900/20 overflow-hidden" aria-label="Zalo">
+                <img src="https://hidosport.vn/wp-content/uploads/2023/09/zalo-icon.png" alt="Zalo" className="w-full h-full object-cover" />
               </a>
             </div>
           </div>

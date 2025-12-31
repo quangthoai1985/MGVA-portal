@@ -12,10 +12,10 @@ export const AboutPage: React.FC = () => {
         <div className="container mx-auto px-4 md:px-8 text-center">
           <span className="text-brand-600 font-bold tracking-wide uppercase text-sm mb-2 block">Về chúng tôi</span>
           <h1 className="text-4xl md:text-5xl font-display font-bold text-gray-900 mb-6">
-            Hành trình 15 năm <br /> <span className="text-brand-600">Ươm mầm hạnh phúc</span>
+            Hành trình 20 năm <br /> <span className="text-brand-600">Ươm mầm hạnh phúc</span>
           </h1>
           <p className="max-w-3xl mx-auto text-gray-600 text-lg">
-            Từ những viên gạch đầu tiên năm 2010, Trường {settings?.schoolName || 'Mầm non Vàng Anh'} đã không ngừng nỗ lực để trở thành ngôi nhà thứ hai đáng tin cậy cho hàng ngàn trẻ em.
+            Từ những viên gạch đầu tiên năm 2006, Trường {settings?.schoolName || 'Mầm non Vàng Anh'} đã không ngừng nỗ lực để trở thành ngôi nhà thứ hai đáng tin cậy cho hàng ngàn trẻ em.
           </p>
         </div>
       </div>
@@ -26,27 +26,20 @@ export const AboutPage: React.FC = () => {
           <div className="relative">
             <div className="absolute -top-4 -left-4 w-24 h-24 bg-brand-100 rounded-full -z-10"></div>
             <img
-              src="https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&q=80&w=1000"
+              src="https://firebasestorage.googleapis.com/v0/b/vanganh-portal/o/aboutpage%2F1764646245199_z6924891262685_8dd06a32a6e7f077e34f54885a22a52b.jpg?alt=media"
               alt="School History"
               className="rounded-3xl shadow-2xl w-full object-cover h-[500px]"
             />
-            <div className="absolute bottom-8 right-8 bg-white p-6 rounded-2xl shadow-xl max-w-xs">
-              <div className="flex items-center gap-3 mb-2">
-                <History className="w-6 h-6 text-brand-500" />
-                <span className="font-bold text-gray-900 text-lg">Thành lập 2010</span>
-              </div>
-              <p className="text-gray-500 text-sm">Khởi đầu với 3 phòng học và 50 học sinh, nay đã vươn mình mạnh mẽ.</p>
-            </div>
           </div>
 
           <div className="space-y-8">
             <h2 className="text-3xl font-display font-bold text-gray-900">Lịch sử hình thành & Phát triển</h2>
             <div className="space-y-6">
               {[
-                { year: '2010', title: 'Thành lập trường', desc: `Trường ${settings?.schoolName || 'Mầm non Vàng Anh'} chính thức đi vào hoạt động tại Quận Phú Nhuận.` },
-                { year: '2015', title: 'Mở rộng quy mô', desc: 'Khánh thành cơ sở 2 và nâng cấp hệ thống phòng học theo tiêu chuẩn quốc tế.' },
-                { year: '2018', title: 'Đổi mới phương pháp', desc: 'Chính thức áp dụng phương pháp Montessori và Reggio Emilia vào giảng dạy.' },
-                { year: '2023', title: 'Trường chuẩn Quốc gia', desc: 'Vinh dự đón nhận bằng khen và công nhận đạt chuẩn Quốc gia mức độ 2.' }
+                { year: '2006', title: 'Thành lập trường', desc: `Trường ${settings?.schoolName || 'Mầm non Vàng Anh'} chính thức đi vào hoạt động với tên gọi là Trường mẫu giáo Vĩnh Châu.` },
+                { year: '2018', title: 'Đổi tên trường', desc: 'Trường được đổi tên thành Trường mẫu giáo Vàng Anh theo Quyết định số 2352/QĐ-UBND ngày 09 tháng 8 năm 2018 của Ủy ban nhân dân thành phố Châu Đốc.' },
+                { year: '2020', title: 'Được đầu tư mở rộng cơ sở vật chất', desc: 'Trường được đầu tư hơn 10 tỷ đồng để nâng cấp toàn diện từ cải tạo các hạng mục của khối cũ, xây dựng khối mới và trang cấp thiết bị, đồ dùng đồ chơi.' },
+                { year: '2025', title: 'Trường chuẩn Quốc gia', desc: 'Trường đã vinh dự được công nhận đạt chuẩn quốc gia mức độ 2 và đạt kiểm định chất lượng giáo dục cấp độ 3.' }
               ].map((item, idx) => (
                 <div key={idx} className="flex gap-4 group">
                   <div className="flex flex-col items-center">
@@ -78,7 +71,7 @@ export const AboutPage: React.FC = () => {
               <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
                 <Building2 className="w-8 h-8 text-emerald-500" />
               </div>
-              <h3 className="text-4xl font-bold text-gray-900 mb-2">20+</h3>
+              <h3 className="text-4xl font-bold text-gray-900 mb-2">10+</h3>
               <p className="font-bold text-gray-800 mb-2">Phòng học tiêu chuẩn</p>
               <p className="text-gray-600 text-sm">Diện tích 50m2/phòng, tràn ngập ánh sáng tự nhiên và trang thiết bị hiện đại.</p>
             </div>
@@ -87,24 +80,24 @@ export const AboutPage: React.FC = () => {
               <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
                 <Users className="w-8 h-8 text-brand-500" />
               </div>
-              <h3 className="text-4xl font-bold text-gray-900 mb-2">500+</h3>
+              <h3 className="text-4xl font-bold text-gray-900 mb-2">140+</h3>
               <p className="font-bold text-gray-800 mb-2">Học sinh theo học</p>
-              <p className="text-gray-600 text-sm">Được chia thành các nhóm lớp theo độ tuổi với tỷ lệ cô/trẻ đạt chuẩn vàng.</p>
+              <p className="text-gray-600 text-sm">Trường có 5 lớp với 144 trẻ (120 trẻ bán trú).</p>
             </div>
 
             <div className="bg-sky-50 rounded-3xl p-8 text-center hover:-translate-y-2 transition-transform duration-300">
               <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
                 <Trophy className="w-8 h-8 text-sky-500" />
               </div>
-              <h3 className="text-4xl font-bold text-gray-900 mb-2">50+</h3>
+              <h3 className="text-4xl font-bold text-gray-900 mb-2">10+</h3>
               <p className="font-bold text-gray-800 mb-2">Giáo viên & Nhân sự</p>
-              <p className="text-gray-600 text-sm">100% đạt chuẩn và trên chuẩn, tận tâm, yêu trẻ và giàu kinh nghiệm.</p>
+              <p className="text-gray-600 text-sm">Đội ngũ gồm 18 cán bộ, giáo viên, nhân viên, trong đó 100% đạt chuẩn, 70% trên chuẩn, tận tâm, yêu trẻ và giàu kinh nghiệm.</p>
             </div>
           </div>
 
           <div className="grid md:grid-cols-2 gap-4 mt-8">
-            <img src="https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80&w=800" className="rounded-2xl w-full h-64 object-cover" alt="Classroom" />
-            <img src="https://images.unsplash.com/photo-1596464716127-f9a16a8122d2?auto=format&fit=crop&q=80&w=800" className="rounded-2xl w-full h-64 object-cover" alt="Playground" />
+            <img src="https://firebasestorage.googleapis.com/v0/b/vanganh-portal/o/aboutpage%2F1764646290727_z5800009575201_da5bdd0fd3c9d9e70e446c3765eb9842.jpg?alt=media" className="rounded-2xl w-full h-64 object-cover" alt="Classroom" />
+            <img src="https://firebasestorage.googleapis.com/v0/b/vanganh-portal/o/aboutpage%2F1764646308350_z5812638503711_e3b52528951982096cadde3bff018243.jpg?alt=media" className="rounded-2xl w-full h-64 object-cover" alt="Playground" />
           </div>
         </div>
       </div>
