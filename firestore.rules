@@ -1,0 +1,25 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Allow public read access to all documents
+    match /{document=**} {
+      allow read: if true;
+    }
+
+    // Allow authenticated users to write to all documents
+    match /{document=**} {
+      allow write: if request.auth != null;
+    }
+
+    // Allow public to update visit count
+    match /settings/general {
+      allow write: if true;
+    }
+
+    // Allow public to submit contact forms
+    match /contacts/{document=**} {
+      allow create: if true;
+    }
+  }
+}

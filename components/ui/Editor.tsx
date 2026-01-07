@@ -26,15 +26,26 @@ const MenuBar = ({ editor, onImageUpload }: { editor: any; onImageUpload?: (file
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = 'image/*';
+            input.multiple = true;
             input.onchange = async () => {
                 if (input.files?.length) {
-                    const file = input.files[0];
+                    const files = Array.from(input.files);
                     try {
-                        const url = await onImageUpload(file);
-                        editor.chain().focus().setImage({ src: url }).run();
+                        // Upload images in parallel
+                        const uploadPromises = files.map(file => onImageUpload(file));
+                        const urls = await Promise.all(uploadPromises);
+
+                        // Create content array with images and spacers
+                        const contentToInsert = urls.map(url => ({
+                            type: 'image',
+                            attrs: { src: url }
+                        }));
+
+                        // Insert all images at once
+                        editor.chain().focus().insertContent(contentToInsert).createParagraphNear().run();
                     } catch (error) {
-                        console.error("Error uploading image:", error);
-                        alert("Lỗi khi tải ảnh lên.");
+                        console.error("Error uploading images:", error);
+                        alert("Có lỗi xảy ra khi tải ảnh. Vui lòng thử lại.");
                     }
                 }
             };

@@ -1,4 +1,8 @@
 {
+    "firestore": {
+        "rules": "firestore.rules",
+        "indexes": "firestore.indexes.json"
+    },
     "hosting": {
         "site": "vang-anh-portal",
         "public": "dist",
@@ -13,5 +17,9 @@
                 "destination": "/index.html"
             }
         ]
+    },
+    "storage": {
+        "target": "main_bucket",
+        "rules": "storage.rules"
     }
 }

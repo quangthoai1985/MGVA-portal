@@ -1,0 +1,55 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Helper function to check authentication
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Explicit rules for all used paths in the application
+    
+    // News & Activities (Covers and Content) - Used in NewsManager
+    match /news/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+    
+    // Gallery Images - Used in GalleryManager
+    match /gallery/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+    
+    // Announcements Images - Used in AnnouncementsManager
+    match /announcements/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+    
+    // Menus (Monthly PDF/Images) - Used in MenuManager
+    match /menus/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+    
+    // Branding (Logo, Favicon) - Used in SettingsManager
+    match /branding/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // Library (Legacy/Future)
+    match /library/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // Default catch-all rule
+    // This ensures any other paths are readable by default, preventing "Not user visible" errors 
+    // for paths we might have missed, while protecting writes.
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+  }
+}

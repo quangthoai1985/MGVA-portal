@@ -14,6 +14,7 @@ export const NewsPage: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
+        window.scrollTo(0, 0);
         const fetchNews = async () => {
             try {
                 const q = query(

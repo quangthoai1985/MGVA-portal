@@ -180,7 +180,7 @@ export const NewsDetail = () => {
                             <span className="text-gray-500 text-sm font-medium">Chia sẻ:</span>
                             {/* Add share buttons here if needed */}
                         </div>
-                        <Button onClick={() => navigate('/')} variant="outline">
+                        <Button onClick={() => navigate('/news')} variant="outline">
                             Xem các tin khác
                         </Button>
                     </div>

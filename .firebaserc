@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "vang-anh-bd21c"
-  }
+  },
+  "targets": {
+    "vang-anh-bd21c": {
+      "storage": {
+        "main_bucket": [
+          "vanganh-portal"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }
